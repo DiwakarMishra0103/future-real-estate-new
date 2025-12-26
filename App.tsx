@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Phone, Mail, Facebook, Instagram, Linkedin, Youtube, Home, User, PlusCircle, ArrowRight, GitCompare, Trash2 } from 'lucide-react';
+import { Menu, X, Phone, Mail, Facebook, Instagram, Linkedin, Youtube, Home, User, PlusCircle, ArrowRight, GitCompare, Trash2, ShieldCheck } from 'lucide-react';
 import { Hero } from './components/Hero';
 import { Carousel } from './components/Carousel';
 import { SectionHeader } from './components/SectionHeader';
@@ -9,16 +9,20 @@ import { CompareModal } from './components/CompareModal';
 import { PropertyListing } from './components/PropertyListing';
 import { BlogDetail } from './components/BlogDetail';
 import { PropertyDetail } from './components/PropertyDetail';
-import { HIGHLIGHTED_PROJECTS, POPULAR_PROPERTIES, TOP_LOCATIONS, DREAM_CATEGORIES, BLOGS, BlogItemExtended } from './constants';
+import { AdminDashboard } from './components/AdminDashboard';
+import { ALL_PROPERTIES, TOP_LOCATIONS, DREAM_CATEGORIES, BLOGS, BlogItemExtended } from './constants';
 import { Property } from './types';
 
-type ViewState = 'HOME' | 'PROPERTY_DETAILS' | 'LISTING' | 'BLOG_DETAILS';
+type ViewState = 'HOME' | 'PROPERTY_DETAILS' | 'LISTING' | 'BLOG_DETAILS' | 'ADMIN';
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewState>('HOME');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
+  // DATA STATE (Moved from constants to State to allow Admin updates)
+  const [properties, setProperties] = useState<Property[]>(ALL_PROPERTIES);
+
   // Selection State
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [selectedBlog, setSelectedBlog] = useState<BlogItemExtended | null>(null);
@@ -26,6 +30,10 @@ function App() {
   // Comparison State
   const [compareList, setCompareList] = useState<Property[]>([]);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+
+  // Derived State for Sections
+  const highlightedProjects = properties.slice(0, 4); // Simulating "Highlighted"
+  const popularProperties = properties.slice(4, 8); // Simulating "Popular"
 
   // Navigation Handlers
   const goHome = () => {
@@ -50,6 +58,20 @@ function App() {
     setSelectedBlog(blog);
     setCurrentView('BLOG_DETAILS');
     window.scrollTo(0, 0);
+  };
+
+  const goToAdmin = () => {
+    setCurrentView('ADMIN');
+    window.scrollTo(0, 0);
+  }
+
+  // Admin Actions
+  const handleAddProperty = (newProperty: Property) => {
+    setProperties(prev => [newProperty, ...prev]);
+  };
+
+  const handleDeleteProperty = (id: string) => {
+    setProperties(prev => prev.filter(p => p.id !== id));
   };
 
   // Security Measures: Disable Right Click and DevTools Shortcuts
@@ -97,10 +119,12 @@ function App() {
   // Auto-open modal after 5 seconds to generate leads
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsModalOpen(true);
+      if (currentView === 'HOME') {
+         setIsModalOpen(true);
+      }
     }, 5000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [currentView]);
 
   const openModal = () => setIsModalOpen(true);
 
@@ -166,7 +190,19 @@ function App() {
 
   // --- VIEW RENDERING ---
 
-  // 1. Blog Details View
+  // 1. Admin Dashboard View
+  if (currentView === 'ADMIN') {
+    return (
+        <AdminDashboard 
+            properties={properties}
+            onAddProperty={handleAddProperty}
+            onDeleteProperty={handleDeleteProperty}
+            onLogout={goHome}
+        />
+    );
+  }
+
+  // 2. Blog Details View
   if (currentView === 'BLOG_DETAILS' && selectedBlog) {
     return (
         <>
@@ -176,7 +212,7 @@ function App() {
     );
   }
 
-  // 2. Property Listing View
+  // 3. Property Listing View
   if (currentView === 'LISTING') {
     return (
         <>
@@ -191,7 +227,7 @@ function App() {
     );
   }
 
-  // 3. Detail Page View
+  // 4. Detail Page View
   if (currentView === 'PROPERTY_DETAILS' && selectedProperty) {
     return (
       <>
@@ -207,7 +243,7 @@ function App() {
     );
   }
 
-  // 4. Main Home Page View
+  // 5. Main Home Page View
   return (
     <div className="min-h-screen bg-white font-sans text-gray-800">
       
@@ -260,7 +296,7 @@ function App() {
         <section>
             <SectionHeader title="Top Highlighted Projects" onLinkClick={goToListing} />
             <Carousel>
-                {HIGHLIGHTED_PROJECTS.map((project) => (
+                {highlightedProjects.map((project) => (
                     <div 
                         key={project.id} 
                         onClick={() => goToDetails(project)}
@@ -297,7 +333,7 @@ function App() {
         <section>
             <SectionHeader title="Popular Properties" onLinkClick={goToListing} />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {POPULAR_PROPERTIES.map((property) => (
+                {popularProperties.map((property) => (
                     <div 
                         key={property.id} 
                         onClick={() => goToDetails(property)}
@@ -357,7 +393,7 @@ function App() {
         <section>
             <SectionHeader title="Recommended Property" onLinkClick={goToListing} />
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[...POPULAR_PROPERTIES].reverse().map((property) => (
+                {[...popularProperties].reverse().map((property) => (
                     <div 
                         key={`rec-${property.id}`} 
                         onClick={() => goToDetails(property)}
@@ -495,8 +531,14 @@ function App() {
                     </div>
                 </div>
             </div>
-            <div className="border-t border-gray-800 pt-8 text-center text-xs text-gray-500">
-                &copy; {new Date().getFullYear()} Future Real Estate. All rights reserved.
+            <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500 gap-4">
+                <div>&copy; {new Date().getFullYear()} Future Real Estate. All rights reserved.</div>
+                <button 
+                  onClick={goToAdmin}
+                  className="flex items-center gap-1 hover:text-white transition"
+                >
+                  <ShieldCheck size={12} /> Admin Login
+                </button>
             </div>
         </div>
       </footer>

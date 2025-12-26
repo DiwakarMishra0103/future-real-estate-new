@@ -13,6 +13,7 @@ export interface Property {
   amenities?: string[];
   bedBath?: string;
   videoUrl?: string;
+  arModelUrl?: string;
 }
 
 export interface LocationItem {
@@ -35,4 +36,8 @@ export interface CategoryItem {
   description: string;
   image: string;
   icon?: string;
+}
+
+export interface BlogItemExtended extends BlogItem {
+    content?: string;
 }
